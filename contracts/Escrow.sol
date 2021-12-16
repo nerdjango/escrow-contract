@@ -31,6 +31,10 @@ contract Escrow{
         nonce++;
     }
 
+    function checkOrder(bytes32 _msg) public view returns(SupplyOrder memory order) {
+        order = userSupplyOrders[_msg];
+    }
+
     function cancelOrder(bytes32 _msg) public orderIsActive(_msg) {
         require(userSupplyOrders[_msg].supplyFulfilled==false);
         require(userSupplyOrders[_msg].client==msg.sender);
