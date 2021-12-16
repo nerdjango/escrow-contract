@@ -26,7 +26,7 @@ contract Escrow{
     function fundContractForSupplyOrder(address _supplier) public payable returns (bytes32 message) {
         require(msg.value>0, "Insufficient amount");
         supplyOrder.push(SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false));
-        message=keccak256(abi.encodePacked(msg.value, address(this), msg.sender, _supplier, nonce));
+        message=keccak256(abi.encodePacked(msg.value, block.timestamp, nonce));
         userSupplyOrders[message]=SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false);
         nonce++;
     }
