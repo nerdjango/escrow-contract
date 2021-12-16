@@ -36,20 +36,20 @@ contract Escrow{
     }
 
     function cancelOrder(bytes32 _msg) public orderIsActive(_msg) {
-        require(userSupplyOrders[_msg].supplyFulfilled==false);
-        require(userSupplyOrders[_msg].client==msg.sender);
+        require(userSupplyOrders[_msg].supplyFulfilled==false, "This order cannot be cancelled as the order has already been fulfilled by the supplier");
+        require(userSupplyOrders[_msg].client==msg.sender, "You're not the client for this order");
 
         userSupplyOrders[_msg].cancelled=true;
     }
 
     function confirmFulfilment(bytes32 _msg) public orderIsActive(_msg) {
-        require(userSupplyOrders[_msg].supplier==msg.sender);
+        require(userSupplyOrders[_msg].supplier==msg.sender, "You're not the supplier for this order");
 
         userSupplyOrders[_msg].supplyFulfilled=true;
     }
 
     function confirmReceipt(bytes32 _msg) public orderIsActive(_msg) {
-        require(userSupplyOrders[_msg].client==msg.sender);
+        require(userSupplyOrders[_msg].client==msg.sender, "You're not the client for this order");
 
         userSupplyOrders[_msg].supplyReceived=true;
     }
@@ -65,8 +65,8 @@ contract Escrow{
         bytes memory _signature,
         bytes32 _msg
     ) public view orderIsActive(_msg) returns (bool) {
-        require(userSupplyOrders[_msg].supplyReceived==true);
-        require(userSupplyOrders[_msg].supplier==msg.sender);
+        require(userSupplyOrders[_msg].supplyReceived==true, "You cannot redeem this contract until the client confirms receipt");
+        require(userSupplyOrders[_msg].supplier==msg.sender, "You're not the supplier for this order");
 
         bool valid = userSupplyOrders[_msg].client ==
             _msg.toEthSignedMessageHash().recover(_signature);
@@ -90,8 +90,8 @@ contract Escrow{
     modifier orderIsActive(
         bytes32 _msg
     ) {
-        require(userSupplyOrders[_msg].completed==false);
-        require(userSupplyOrders[_msg].cancelled==false);
+        require(userSupplyOrders[_msg].completed==false, "This order has been completed");
+        require(userSupplyOrders[_msg].cancelled==false, "This order has been cancelled");
         _;
     }
 
