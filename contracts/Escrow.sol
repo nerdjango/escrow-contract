@@ -14,7 +14,10 @@ contract Escrow{
         address client;
         address supplier;
         uint amount;
+        bool supplyMade;
+        bool supplyReceived;
         bool completed;
+        bool cancelled;
     }
 
     uint nonce = 0;
@@ -25,9 +28,9 @@ contract Escrow{
 
     function fundContractForSupplyOrder(address _supplier) public payable returns (bytes32 message) {
         require(msg.value>0, "Insufficient amount");
-        supplyOrder.push(SupplyOrder(msg.sender, _supplier, msg.value, false));
+        supplyOrder.push(SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false));
         message=keccak256(abi.encodePacked(msg.value, nonce));
-        userSupplyOrders[message]=SupplyOrder(msg.sender, _supplier, msg.value, false);
+        userSupplyOrders[message]=SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false);
         nonce++;
     }
 
@@ -43,6 +46,8 @@ contract Escrow{
         bytes32 _msg
     ) public view returns (bool) {
         require(userSupplyOrders[_msg].completed==false);
+        require(userSupplyOrders[_msg].cancelled==false);
+        require(userSupplyOrders[_msg].supplyReceived==true);
         require(userSupplyOrders[_msg].supplier==msg.sender);
         bool valid = userSupplyOrders[_msg].client ==
             _msg.toEthSignedMessageHash().recover(_signature);
