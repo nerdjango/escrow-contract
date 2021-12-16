@@ -7,14 +7,11 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract Escrow{
     using ECDSA for bytes32;
 
-    // address payable public client;
-    // address payable public supplier;
-
     struct SupplyOrder {
         address client;
         address supplier;
         uint amount;
-        bool supplyMade;
+        bool supplyFulfilled;
         bool supplyReceived;
         bool completed;
         bool cancelled;
@@ -34,6 +31,25 @@ contract Escrow{
         nonce++;
     }
 
+    function cancelOrder(bytes32 _msg) public orderIsActive(_msg) {
+        require(userSupplyOrders[_msg].supplyFulfilled==false);
+        require(userSupplyOrders[_msg].client==msg.sender);
+
+        userSupplyOrders[_msg].cancelled=true;
+    }
+
+    function confirmFulfilment(bytes32 _msg) public orderIsActive(_msg) {
+        require(userSupplyOrders[_msg].supplier==msg.sender);
+
+        userSupplyOrders[_msg].supplyFulfilled=true;
+    }
+
+    function confirmReceipt(bytes32 _msg) public orderIsActive(_msg) {
+        require(userSupplyOrders[_msg].client==msg.sender);
+
+        userSupplyOrders[_msg].supplyReceived=true;
+    }
+
     function receivePayment(
         bytes memory _signature,
         bytes32 _msg
@@ -44,11 +60,10 @@ contract Escrow{
     function verify(
         bytes memory _signature,
         bytes32 _msg
-    ) public view returns (bool) {
-        require(userSupplyOrders[_msg].completed==false);
-        require(userSupplyOrders[_msg].cancelled==false);
+    ) public view orderIsActive(_msg) returns (bool) {
         require(userSupplyOrders[_msg].supplyReceived==true);
         require(userSupplyOrders[_msg].supplier==msg.sender);
+
         bool valid = userSupplyOrders[_msg].client ==
             _msg.toEthSignedMessageHash().recover(_signature);
         if (!valid) {
@@ -65,6 +80,14 @@ contract Escrow{
             verify(_signature, _msg),
             "Invalid signature"
         );
+        _;
+    }
+
+    modifier orderIsActive(
+        bytes32 _msg
+    ) {
+        require(userSupplyOrders[_msg].completed==false);
+        require(userSupplyOrders[_msg].cancelled==false);
         _;
     }
 
