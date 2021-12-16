@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.10;
+pragma solidity ^0.8.0;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -17,6 +17,8 @@ contract Escrow{
         bool cancelled;
     }
 
+    event SupplyOrderCreated(address supplier, bytes32 message);
+
     uint nonce = 0;
 
     mapping(bytes32 => SupplyOrder) userSupplyOrders;
@@ -26,9 +28,10 @@ contract Escrow{
     function fundContractForSupplyOrder(address _supplier) public payable returns (bytes32 message) {
         require(msg.value>0, "Insufficient amount");
         supplyOrder.push(SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false));
-        message=keccak256(abi.encodePacked(msg.value, block.timestamp, nonce));
+        message=keccak256(abi.encodePacked(msg.value, address(this), nonce));
         userSupplyOrders[message]=SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false);
         nonce++;
+        emit SupplyOrderCreated(_supplier, message);
     }
 
     function checkOrder(bytes32 _msg) public view returns(SupplyOrder memory order) {
@@ -58,6 +61,7 @@ contract Escrow{
         bytes memory _signature,
         bytes32 _msg
     ) public checkSignature(_signature, _msg) {
+        userSupplyOrders[_msg].completed=true;
         payable(msg.sender).transfer(userSupplyOrders[_msg].amount);
     }
 
