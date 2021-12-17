@@ -18,11 +18,8 @@ contract Escrow{
     }
 
     event SupplyOrderCreated(address supplier, bytes32 message);
-
     uint nonce = 0;
-
-    mapping(bytes32 => SupplyOrder) userSupplyOrders;
-
+    mapping(bytes32 => SupplyOrder) public userSupplyOrders; 
     SupplyOrder[] supplyOrder;
 
     function fundContractForSupplyOrder(address _supplier) public payable returns (bytes32 message) {
@@ -45,8 +42,7 @@ contract Escrow{
         userSupplyOrders[_msg].cancelled=true;
     }
 
-    function confirmFulfilment(bytes32 _msg) public orderIsActive(_msg) {
-        require(userSupplyOrders[_msg].supplier==msg.sender, "You're not the supplier for this order");
+    function confirmFulfilment(bytes32 _msg) public orderIsActive(_msg) isSupplier(_msg) {
 
         userSupplyOrders[_msg].supplyFulfilled=true;
     }
@@ -60,7 +56,7 @@ contract Escrow{
     function receivePayment(
         bytes memory _signature,
         bytes32 _msg
-    ) public checkSignature(_signature, _msg) {
+    ) public checkSignature(_signature, _msg) isSupplier(_msg) {
         userSupplyOrders[_msg].completed=true;
         payable(msg.sender).transfer(userSupplyOrders[_msg].amount);
     }
@@ -70,7 +66,6 @@ contract Escrow{
         bytes32 _msg
     ) public view orderIsActive(_msg) returns (bool) {
         require(userSupplyOrders[_msg].supplyReceived==true, "You cannot redeem this contract until the client confirms receipt");
-        require(userSupplyOrders[_msg].supplier==msg.sender, "You're not the supplier for this order");
 
         bool valid = userSupplyOrders[_msg].client ==
             _msg.toEthSignedMessageHash().recover(_signature);
@@ -96,6 +91,13 @@ contract Escrow{
     ) {
         require(userSupplyOrders[_msg].completed==false, "This order has been completed");
         require(userSupplyOrders[_msg].cancelled==false, "This order has been cancelled");
+        _;
+    }
+
+    modifier isSupplier(
+        bytes32 _msg
+    ) {
+        require(userSupplyOrders[_msg].supplier==msg.sender, "You're not the supplier for this order");
         _;
     }
 
