@@ -22,7 +22,7 @@ contract Escrow{
     mapping(bytes32 => SupplyOrder) public userSupplyOrders; 
     SupplyOrder[] supplyOrder;
 
-    function fundContractForSupplyOrder(address _supplier) public payable returns (bytes32 message) {
+    function fundContractForSupplyOrder(address _supplier) external payable returns (bytes32 message) {
         require(msg.value>0, "Insufficient amount");
         supplyOrder.push(SupplyOrder(msg.sender, _supplier, msg.value, false, false, false, false));
         message=keccak256(abi.encodePacked(msg.value, address(this), nonce));
@@ -31,23 +31,23 @@ contract Escrow{
         emit SupplyOrderCreated(_supplier, message);
     }
 
-    function checkOrder(bytes32 _msg) public view returns(SupplyOrder memory order) {
+    function checkOrder(bytes32 _msg) external view returns(SupplyOrder memory order) {
         order = userSupplyOrders[_msg];
     }
 
-    function cancelOrder(bytes32 _msg) public orderIsActive(_msg) {
+    function cancelOrder(bytes32 _msg) external orderIsActive(_msg) {
         require(userSupplyOrders[_msg].supplyFulfilled==false, "This order cannot be cancelled as the order has already been fulfilled by the supplier");
         require(userSupplyOrders[_msg].client==msg.sender, "You're not the client for this order");
 
         userSupplyOrders[_msg].cancelled=true;
     }
 
-    function confirmFulfilment(bytes32 _msg) public orderIsActive(_msg) isSupplier(_msg) {
+    function confirmFulfilment(bytes32 _msg) external orderIsActive(_msg) isSupplier(_msg) {
 
         userSupplyOrders[_msg].supplyFulfilled=true;
     }
 
-    function confirmReceipt(bytes32 _msg) public orderIsActive(_msg) {
+    function confirmReceipt(bytes32 _msg) external orderIsActive(_msg) {
         require(userSupplyOrders[_msg].client==msg.sender, "You're not the client for this order");
 
         userSupplyOrders[_msg].supplyReceived=true;
@@ -56,15 +56,15 @@ contract Escrow{
     function receivePayment(
         bytes memory _signature,
         bytes32 _msg
-    ) public checkSignature(_signature, _msg) isSupplier(_msg) {
+    ) external checkSignature(_signature, _msg) isSupplier(_msg) {
         userSupplyOrders[_msg].completed=true;
         payable(msg.sender).transfer(userSupplyOrders[_msg].amount);
     }
 
-    function verify(
+    function _verify(
         bytes memory _signature,
         bytes32 _msg
-    ) public view orderIsActive(_msg) returns (bool) {
+    ) private view orderIsActive(_msg) returns (bool) {
         require(userSupplyOrders[_msg].supplyReceived==true, "You cannot redeem this contract until the client confirms receipt");
 
         bool valid = userSupplyOrders[_msg].client ==
@@ -80,7 +80,7 @@ contract Escrow{
         bytes32 _msg
     ) {
         require(
-            verify(_signature, _msg),
+            _verify(_signature, _msg),
             "Invalid signature"
         );
         _;
