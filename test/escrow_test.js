@@ -23,5 +23,7 @@ contract("Escrow", accounts => {
 
         await truffleAssert.reverts(escrow.receivePayment(signed.signature, message)) // reverts as user is not supplier
         await truffleAssert.passes(escrow.receivePayment(signed.signature, message, { from: accounts[1] }))
+
+        await truffleAssert.reverts(escrow.cancelOrder(message)) // cant cancel a completed order
     })
 })
